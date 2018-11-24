@@ -6,6 +6,10 @@ import tarfile
 from six.moves import urllib
 from ipywidgets import FloatProgress
 from IPython.display import display
+import matplotlib.pyplot as plt
+import numpy as np
+
+classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 def _int64_feature(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
@@ -73,3 +77,7 @@ def cifar10_download(data_dir='/tmp/cifar10_data', print_progress=True):
 
     tarfile.open(filepath, 'r:gz').extractall(data_dir)
 
+def imshow(img):
+    img = img / 2 + 0.5     # unnormalize
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
