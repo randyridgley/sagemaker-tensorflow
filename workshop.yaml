@@ -1,0 +1,112 @@
+Description: " Creates notebook instance to run Tensorflow workshop"
+Parameters:
+  NotebookInstanceType:
+    Type: "String"
+    Default: ml.t2.medium
+    AllowedValues:
+      - ml.t2.medium
+      - ml.t2.large
+      - ml.t2.xlarge
+      - ml.t2.2xlarge
+      - ml.m4.xlarge
+      - ml.m4.2xlarge
+      - ml.p2.xlarge
+      - ml.p3.2xlarge
+    Description: Enter a valid SageMaker notebook instance type. Defaults to ml.t2.medium.
+
+  NotebookPrefix:
+    Type: String
+    Description: Prefix for the notebook instance
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+
+  SageMakerIamRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Sub ${NotebookPrefix}-AmazonSageMaker-ExecutionRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "sagemaker.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Path: "/service-role/"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
+        - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+
+  MLWorkshopS3Policy:
+    Type: AWS::IAM::Policy
+    Properties: 
+      PolicyName: "S3AccessGlueAndAthena"
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Action: 
+              - "s3:GetObject"
+              - "s3:PutObject"
+              - "s3:DeleteObject"
+              - "s3:ListBucket"
+            Resource: "arn:aws:s3:::*"
+          - Effect: "Allow"
+            Action: 
+              - "glue:GetTables"
+              - "glue:GetTable"
+              - "athena:StartQueryExecution"
+              - "athena:GetQueryExecution"
+              - "athena:GetQueryResults"
+            Resource: "*"
+          - Effect: "Allow"
+            Action:
+              - "logs:CreateLogStream"
+              - "logs:DescribeLogStreams"
+              - "logs:PutLogEvents"
+              - "logs:CreateLogGroup"
+            Resource:
+              - "arn:aws:logs:::log-group:/aws/sagemaker/*"
+              - "arn:aws:logs:::log-group:/aws/sagemaker/*:log-stream:aws-glue-*"
+          - Effect: "Allow"
+            Action:
+              - "glue:UpdateDevEndpoint"
+              - "glue:GetDevEndpoint"
+              - "glue:GetDevEndpoints"
+            Resource: '*'
+      Roles: 
+        - Ref: SageMakerIamRole
+
+  MLWorkshopLifecycleConfig:
+    Type: "AWS::SageMaker::NotebookInstanceLifecycleConfig"
+    Properties:
+      OnStart:
+        - Content:
+            Fn::Base64: 
+              Fn::Sub: |
+                #!/bin/bash
+                set -e
+
+                sudo -i -u ec2-user bash << EOF
+                echo "Setup the Workshop exercises"
+                git clone https://github.com/randyridgley/sagemaker-tensorflow.git ~/SageMaker/tensorflow_workshop/
+                
+                cd ~/SageMaker/tensorflow_workshop/notebooks                
+                find -name '*.ipynb' -exec sed -i 's/{{s3_workshop_bucket}}/${S3Bucket}/g' {} +
+                
+  SageMakerNotebookInstance:
+    Type: "AWS::SageMaker::NotebookInstance"
+    Properties:
+      NotebookInstanceName: !Sub ${NotebookPrefix}-BDW-Notebook
+      InstanceType: !Ref NotebookInstanceType
+      RoleArn: !GetAtt SageMakerIamRole.Arn
+      LifecycleConfigName: !GetAtt MLWorkshopLifecycleConfig.NotebookInstanceLifecycleConfigName
+
+Outputs:
+  SageMakerNotebookInstance:
+    Value: !GetAtt SageMakerNotebookInstance.NotebookInstanceName
+
+  IAMRole:
+    Value: !GetAtt SageMakerIamRole.Arn
