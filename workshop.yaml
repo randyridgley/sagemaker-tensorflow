@@ -35,8 +35,7 @@ Resources:
             Action: "sts:AssumeRole"
       Path: "/service-role/"
       ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
-        - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+        - "arn:aws:iam::aws:policy/AdministratorAccess"
 
   MLWorkshopS3Policy:
     Type: AWS::IAM::Policy
