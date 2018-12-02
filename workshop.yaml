@@ -98,7 +98,7 @@ Resources:
   SageMakerNotebookInstance:
     Type: "AWS::SageMaker::NotebookInstance"
     Properties:
-      NotebookInstanceName: !Sub ${NotebookPrefix}-BDW-Notebook
+      NotebookInstanceName: !Sub ${NotebookPrefix}-Workshop-Notebook
       InstanceType: !Ref NotebookInstanceType
       RoleArn: !GetAtt SageMakerIamRole.Arn
       LifecycleConfigName: !GetAtt MLWorkshopLifecycleConfig.NotebookInstanceLifecycleConfigName
